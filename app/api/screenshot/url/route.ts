@@ -1,0 +1,78 @@
+import { NextRequest, NextResponse } from "next/server";
+import { chromium } from "playwright";
+
+export async function POST(req: NextRequest) {
+  const { url } = await req.json();
+
+  if (!url?.trim()) {
+    return NextResponse.json({ error: "URL is required" }, { status: 400 });
+  }
+
+  // Validate URL
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(url.trim().startsWith("http") ? url.trim() : `https://${url.trim()}`);
+  } catch {
+    return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
+  }
+
+  const browser = await chromium.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
+  });
+
+  try {
+    const context = await browser.newContext({
+      viewport: { width: 1440, height: 900 },
+      userAgent:
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+    });
+    const page = await context.newPage();
+
+    await page.goto(parsedUrl.toString(), {
+      waitUntil: "domcontentloaded",
+      timeout: 25000,
+    });
+
+    // Wait a bit for JS-driven UIs to paint
+    await page.waitForTimeout(2000);
+
+    const screenshotBuffer = await page.screenshot({
+      type: "png",
+      fullPage: false,
+      clip: { x: 0, y: 0, width: 1440, height: 900 },
+    });
+
+    // Collect basic perf metrics while we're here
+    const metrics = await page.evaluate(() => {
+      try {
+        const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming;
+        const fcp = performance.getEntriesByName("first-contentful-paint")[0];
+        return {
+          ttfb: nav ? Math.round(nav.responseStart - nav.requestStart) : null,
+          fcp: fcp ? Math.round(fcp.startTime) : null,
+          domComplete: nav ? Math.round(nav.domComplete - nav.startTime) : null,
+          loadTime: nav ? Math.round(nav.loadEventEnd - nav.startTime) : null,
+          title: document.title,
+        };
+      } catch {
+        return {};
+      }
+    });
+
+    const base64 = Buffer.from(screenshotBuffer).toString("base64");
+
+    return NextResponse.json({
+      imageBase64: `data:image/png;base64,${base64}`,
+      url: parsedUrl.toString(),
+      metrics,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Screenshot failed";
+    return NextResponse.json({ error: `Playwright error: ${msg}` }, { status: 500 });
+  } finally {
+    await browser.close();
+  }
+}
+
+export const runtime = "nodejs";
