@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PLAYWRIGHT_ERROR = "Playwright/Chromium is not available on this server. This feature works locally only — run: npm run dev";
+export const maxDuration = 60;
 
 interface WebVitals {
   url: string;
@@ -17,6 +17,56 @@ interface WebVitals {
   resourceCount: number;
   jsHeapUsed: number | null;
   screenshot: string;
+  scores?: { performance: number; accessibility: number; bestPractices: number; seo: number };
+}
+
+// ── PageSpeed Insights fallback (works on Vercel, same engine as Lighthouse) ──
+async function auditViaPageSpeed(url: string): Promise<WebVitals> {
+  const encoded = encodeURIComponent(url);
+  const psiUrl =
+    `https://www.googleapis.com/pagespeedonline/v5/runPagespeed` +
+    `?url=${encoded}&strategy=desktop` +
+    `&category=performance&category=accessibility&category=best-practices&category=seo`;
+
+  const res = await fetch(psiUrl, { signal: AbortSignal.timeout(55000) });
+  if (!res.ok) throw new Error(`PageSpeed Insights returned ${res.status}`);
+
+  const data = await res.json();
+  const lhr = data.lighthouseResult || {};
+  const audits = lhr.audits || {};
+  const cats = lhr.categories || {};
+
+  const ms = (key: string): number | null => {
+    const v = audits[key]?.numericValue;
+    return v != null ? Math.round(v) : null;
+  };
+
+  // PSI includes a compressed screenshot
+  const screenshot: string =
+    audits["final-screenshot"]?.details?.data ?? "";
+
+  return {
+    url,
+    title: lhr.finalUrl || new URL(url).hostname,
+    ttfb: ms("server-response-time"),
+    fcp: ms("first-contentful-paint"),
+    lcp: ms("largest-contentful-paint"),
+    cls: audits["cumulative-layout-shift"]?.numericValue ?? null,
+    tbt: ms("total-blocking-time"),
+    domInteractive: null,
+    domComplete: null,
+    loadTime: ms("interactive"),
+    transferSize: ms("total-byte-weight"),
+    resourceCount: 0,
+    jsHeapUsed: null,
+    screenshot,
+    scores: {
+      performance: Math.round((cats.performance?.score ?? 0) * 100),
+      accessibility: Math.round((cats.accessibility?.score ?? 0) * 100),
+      bestPractices: Math.round((cats["best-practices"]?.score ?? 0) * 100),
+      seo: Math.round((cats.seo?.score ?? 0) * 100),
+    },
+  };
 }
 
 export async function POST(req: NextRequest) {
@@ -34,14 +84,23 @@ export async function POST(req: NextRequest) {
   }
 
   const pw = await import("playwright").catch(() => null);
-  if (!pw) return NextResponse.json({ error: PLAYWRIGHT_ERROR }, { status: 503 });
+  if (!pw) {
+    // Vercel / serverless — use Google PageSpeed Insights (same Lighthouse engine)
+    try {
+      const result = await auditViaPageSpeed(parsedUrl.toString());
+      return NextResponse.json(result);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Audit failed";
+      return NextResponse.json({ error: `PageSpeed Insights error: ${msg}` }, { status: 502 });
+    }
+  }
 
   const browser = await pw.chromium.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
   }).catch(() => null);
 
-  if (!browser) return NextResponse.json({ error: PLAYWRIGHT_ERROR }, { status: 503 });
+  if (!browser) return NextResponse.json({ error: "Browser launch failed" }, { status: 503 });
 
   try {
     const context = await browser.newContext({

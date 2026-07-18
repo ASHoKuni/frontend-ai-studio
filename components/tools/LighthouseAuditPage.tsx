@@ -119,6 +119,7 @@ interface AuditMetrics {
   transferSize: number | null;
   resourceCount: number;
   jsHeapUsed: number | null;
+  scores?: { performance: number; accessibility: number; bestPractices: number; seo: number };
 }
 
 function scoreColor(val: number | null, thresholds: [number, number]): string {
@@ -332,14 +333,7 @@ export function LighthouseAuditPage() {
         body: JSON.stringify({ url: siteUrl.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        setAuditError(
-          res.status === 503
-            ? "🖥️ Playwright requires a local server. Run the app locally with `npm run dev` to use Live URL audit. On Vercel, use Paste Report mode instead."
-            : data.error ?? "Audit failed."
-        );
-        return;
-      }
+      if (!res.ok) { setAuditError(data.error ?? "Audit failed."); return; }
       setMetrics(data as AuditMetrics);
       await streamReport(buildAuditPrompt(data as AuditMetrics));
     } catch { setAuditError("Network error. Please try again."); }
@@ -556,15 +550,20 @@ export function LighthouseAuditPage() {
             {/* Visual charts section */}
             {(parsedScores || metrics) && (
               <div className="p-4 space-y-4 border-b border-zinc-800">
-                {/* Score gauges — only available from Lighthouse JSON */}
-                {parsedScores && (
+                {/* Score gauges — from Lighthouse JSON (paste) OR PageSpeed Insights (live URL) */}
+                {(parsedScores || metrics?.scores) && (
                   <div>
                     <p className="text-[11px] font-semibold text-zinc-500 uppercase tracking-widest mb-3">Lighthouse Scores</p>
                     <div className="flex justify-around">
-                      <ScoreGauge score={parsedScores.performance} label="Performance" />
-                      <ScoreGauge score={parsedScores.accessibility} label="Accessibility" />
-                      <ScoreGauge score={parsedScores.bestPractices} label="Best Practices" />
-                      <ScoreGauge score={parsedScores.seo} label="SEO" />
+                      {(() => {
+                        const s = parsedScores ?? metrics!.scores!;
+                        return <>
+                          <ScoreGauge score={s.performance} label="Performance" />
+                          <ScoreGauge score={s.accessibility} label="Accessibility" />
+                          <ScoreGauge score={s.bestPractices} label="Best Practices" />
+                          <ScoreGauge score={s.seo} label="SEO" />
+                        </>;
+                      })()}
                     </div>
                   </div>
                 )}
