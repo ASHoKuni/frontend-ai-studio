@@ -216,11 +216,7 @@ export function DesignToCodePage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setSiteError(
-          res.status === 503
-            ? "🖥️ Playwright requires a local server. Run locally with `npm run dev` to use Live URL capture."
-            : data.error ?? "Screenshot failed."
-        );
+        setSiteError(data.error ?? "Screenshot failed.");
         return;
       }
       setImageBase64(data.imageBase64);

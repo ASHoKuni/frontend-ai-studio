@@ -1,6 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PLAYWRIGHT_ERROR = "Playwright/Chromium is not available on this server. This feature works locally only — run: npm run dev";
+export const maxDuration = 30;
+
+// Fallback: Microlink API (free, no key needed, works on Vercel)
+async function screenshotViaApi(url: string) {
+  const encoded = encodeURIComponent(url);
+  const res = await fetch(
+    `https://api.microlink.io/?url=${encoded}&screenshot=true&meta=false&screenshot.viewport.width=1440&screenshot.viewport.height=900`,
+    { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(20000) }
+  );
+  if (!res.ok) throw new Error("Microlink API failed");
+  const data = await res.json();
+  const screenshotUrl: string = data?.data?.screenshot?.url;
+  if (!screenshotUrl) throw new Error("No screenshot URL returned");
+  // Download and convert to base64
+  const imgRes = await fetch(screenshotUrl, { signal: AbortSignal.timeout(15000) });
+  const buffer = await imgRes.arrayBuffer();
+  const base64 = Buffer.from(buffer).toString("base64");
+  const mime = imgRes.headers.get("content-type") ?? "image/png";
+  return { imageBase64: `data:${mime};base64,${base64}`, url, metrics: {} };
+}
 
 export async function POST(req: NextRequest) {
   const { url } = await req.json();
@@ -18,14 +37,23 @@ export async function POST(req: NextRequest) {
   }
 
   const pw = await import("playwright").catch(() => null);
-  if (!pw) return NextResponse.json({ error: PLAYWRIGHT_ERROR }, { status: 503 });
+  if (!pw) {
+    // Vercel / serverless — use Microlink screenshot API as fallback
+    try {
+      const result = await screenshotViaApi(parsedUrl.toString());
+      return NextResponse.json(result);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Screenshot failed";
+      return NextResponse.json({ error: `Screenshot API error: ${msg}` }, { status: 502 });
+    }
+  }
 
   const browser = await pw.chromium.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
   }).catch(() => null);
 
-  if (!browser) return NextResponse.json({ error: PLAYWRIGHT_ERROR }, { status: 503 });
+  if (!browser) return NextResponse.json({ error: "Browser launch failed" }, { status: 503 });
 
   try {
     const context = await browser.newContext({
