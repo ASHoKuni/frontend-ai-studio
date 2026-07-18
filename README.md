@@ -5,7 +5,9 @@
 An AI-powered toolkit with **9 specialized tools** for frontend developers — built with OpenAI GPT-4o, Playwright, esbuild, and Next.js 15.
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit-violet?style=for-the-badge)](https://your-vercel-url.vercel.app)
-[![GitHub](https://img.shields.io/badge/GitHub-Repo-black?style=for-the-badge&logo=github)](https://github.com/YOUR_USERNAME/frontend-ai-studio)
+[![GitHub](https://img.shields.io/badge/GitHub-ASHoKuni%2Ffrontend--ai--studio-black?style=for-the-badge&logo=github)](https://github.com/ASHoKuni/frontend-ai-studio)
+
+**Repository:** https://github.com/ASHoKuni/frontend-ai-studio
 
 ---
 
@@ -62,7 +64,7 @@ An AI-powered toolkit with **9 specialized tools** for frontend developers — b
 ### Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/frontend-ai-studio.git
+git clone https://github.com/ASHoKuni/frontend-ai-studio.git
 cd frontend-ai-studio
 npm install
 npx playwright install chromium
