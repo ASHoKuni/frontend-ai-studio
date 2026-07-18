@@ -23,12 +23,18 @@ interface WebVitals {
 // ── PageSpeed Insights fallback (works on Vercel, same engine as Lighthouse) ──
 async function auditViaPageSpeed(url: string): Promise<WebVitals> {
   const encoded = encodeURIComponent(url);
+  const key = process.env.GOOGLE_PSI_KEY ? `&key=${process.env.GOOGLE_PSI_KEY}` : "";
   const psiUrl =
     `https://www.googleapis.com/pagespeedonline/v5/runPagespeed` +
     `?url=${encoded}&strategy=desktop` +
-    `&category=performance&category=accessibility&category=best-practices&category=seo`;
+    `&category=performance&category=accessibility&category=best-practices&category=seo${key}`;
 
   const res = await fetch(psiUrl, { signal: AbortSignal.timeout(55000) });
+  if (res.status === 429) {
+    throw new Error(
+      "Google PageSpeed Insights rate limit reached. Add GOOGLE_PSI_KEY to your environment variables for higher limits. Get a free key at: console.cloud.google.com → APIs → PageSpeed Insights API"
+    );
+  }
   if (!res.ok) throw new Error(`PageSpeed Insights returned ${res.status}`);
 
   const data = await res.json();
