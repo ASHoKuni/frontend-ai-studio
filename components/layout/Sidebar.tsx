@@ -82,6 +82,18 @@ export function Sidebar() {
             )}
           />
         </button>
+
+        {/* Pitch deck link */}
+        <Link
+          href="/pitch"
+          target="_blank"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-zinc-500 hover:text-zinc-100 hover:bg-zinc-800 transition-all duration-150"
+        >
+          <span className="text-base shrink-0">🎯</span>
+          <span className="font-medium truncate">Pitch Deck</span>
+          <span className="ml-auto text-[10px] text-zinc-600">↗</span>
+        </Link>
+
         <p className="text-[10px] text-zinc-700 text-center px-2">
           Powered by OpenAI GPT-4o
         </p>
