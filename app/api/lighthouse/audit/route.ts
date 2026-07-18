@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { chromium } from "playwright";
+
+const PLAYWRIGHT_ERROR = "Playwright/Chromium is not available on this server. This feature works locally only — run: npm run dev";
 
 interface WebVitals {
   url: string;
@@ -32,17 +33,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
   }
 
-  const browser = await chromium.launch({
+  const pw = await import("playwright").catch(() => null);
+  if (!pw) return NextResponse.json({ error: PLAYWRIGHT_ERROR }, { status: 503 });
+
+  const browser = await pw.chromium.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
   }).catch(() => null);
 
-  if (!browser) {
-    return NextResponse.json(
-      { error: "Playwright/Chromium is not available in this environment. This feature works locally only. Run: npx playwright install chromium" },
-      { status: 503 }
-    );
-  }
+  if (!browser) return NextResponse.json({ error: PLAYWRIGHT_ERROR }, { status: 503 });
 
   try {
     const context = await browser.newContext({
