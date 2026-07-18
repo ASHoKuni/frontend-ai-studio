@@ -332,7 +332,14 @@ export function LighthouseAuditPage() {
         body: JSON.stringify({ url: siteUrl.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) { setAuditError(data.error ?? "Audit failed."); return; }
+      if (!res.ok) {
+        setAuditError(
+          res.status === 503
+            ? "🖥️ Playwright requires a local server. Run the app locally with `npm run dev` to use Live URL audit. On Vercel, use Paste Report mode instead."
+            : data.error ?? "Audit failed."
+        );
+        return;
+      }
       setMetrics(data as AuditMetrics);
       await streamReport(buildAuditPrompt(data as AuditMetrics));
     } catch { setAuditError("Network error. Please try again."); }

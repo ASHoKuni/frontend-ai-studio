@@ -215,7 +215,14 @@ export function DesignToCodePage() {
         body: JSON.stringify({ url: siteUrl.trim() }),
       });
       const data = await res.json();
-      if (!res.ok) { setSiteError(data.error ?? "Screenshot failed."); return; }
+      if (!res.ok) {
+        setSiteError(
+          res.status === 503
+            ? "🖥️ Playwright requires a local server. Run locally with `npm run dev` to use Live URL capture."
+            : data.error ?? "Screenshot failed."
+        );
+        return;
+      }
       setImageBase64(data.imageBase64);
       setImagePreview(data.imageBase64);
     } catch { setSiteError("Network error. Check your connection."); }

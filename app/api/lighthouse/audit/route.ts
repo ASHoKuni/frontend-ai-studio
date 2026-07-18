@@ -35,7 +35,14 @@ export async function POST(req: NextRequest) {
   const browser = await chromium.launch({
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
-  });
+  }).catch(() => null);
+
+  if (!browser) {
+    return NextResponse.json(
+      { error: "Playwright/Chromium is not available in this environment. This feature works locally only. Run: npx playwright install chromium" },
+      { status: 503 }
+    );
+  }
 
   try {
     const context = await browser.newContext({
