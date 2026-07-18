@@ -4,9 +4,10 @@
 
 An AI-powered toolkit with **9 specialized tools** for frontend developers — built with OpenAI GPT-4o, Playwright, esbuild, and Next.js 15.
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit-violet?style=for-the-badge)](https://your-vercel-url.vercel.app)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit-violet?style=for-the-badge)](https://frontend-ai-studio.vercel.app)
 [![GitHub](https://img.shields.io/badge/GitHub-ASHoKuni%2Ffrontend--ai--studio-black?style=for-the-badge&logo=github)](https://github.com/ASHoKuni/frontend-ai-studio)
 
+**Live Demo:** https://frontend-ai-studio.vercel.app
 **Repository:** https://github.com/ASHoKuni/frontend-ai-studio
 
 ---
