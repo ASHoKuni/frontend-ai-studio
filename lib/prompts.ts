@@ -25,11 +25,18 @@ Requirements:
 - Style with Tailwind CSS utility classes only (no inline styles)
 - Include proper TypeScript interfaces/types
 - Add accessibility attributes (aria-label, role, etc.)
-- Handle loading and error states if applicable
 - Export as a named export
-- Include brief JSDoc comments on props
 
-Return ONLY the complete component code. No explanations outside of comments.
+CRITICAL — DEFENSIVE CODING (the component renders in a sandboxed preview):
+- The component MUST be 100% self-contained — hardcode all sample data directly inside the component body
+- NEVER use props for arrays/lists — define them as const inside the component
+- useState for arrays MUST have a default: useState([item1, item2]) NEVER useState()
+- NEVER call .map() on a variable that could be undefined — always initialize arrays first
+- Example: const tiers = [{name:'Free', price:'$0', features:['Feature A']}, ...]; then tiers.map(...)
+- Do NOT import any external libraries — only React (already available globally)
+- Do NOT use React.FC<Props> type — just export function ComponentName()
+
+Return ONLY the complete component code with no explanations outside comments.
 
 Description: `,
 
